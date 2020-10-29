@@ -1,0 +1,78 @@
+# PHP 容器配置
+
+# 从官方基础版本构建
+FROM php:7.1-fpm
+# 官方版本默认安装扩展: 
+# Core ctype curl date dom fileinfo filter ftp hash iconv json libxml mbstring
+# mysqlnd openssl pcre PDO pdo_sqlite Phar posix readline Reflection session
+# SimpleXML sodium SPL sqlite3 standard tokenizer xml xmlreader xmlwriter zlib
+
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+#   设置环境变量 php 目录
+ENV PHP_PATH="/usr/local/etc/"
+
+#   使用163源与设置时间
+RUN sed -i s@/deb.debian.org/@/mirrors.163.com/@g /etc/apt/sources.list \
+    && sed -i s@/security.debian.org/@/mirrors.163.com/@g /etc/apt/sources.list \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    #   更新系统\安装依赖包
+    && apt-get update -y \
+    && apt-get install -y --no-install-recommends fontconfig tzdata procps \
+    && rm -r /var/lib/apt/lists/* 
+
+# 安装扩展依赖包
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libfreetype6-dev libjpeg62-turbo-dev libpng-dev libicu-dev libxml2-dev \
+    libtidy-dev libxslt1-dev libzip-dev libldap2-dev libc-client-dev libkrb5-dev libmagickwand-dev zlib1g-dev libmemcached-dev \
+    && rm -r /var/lib/apt/lists/* 
+
+# 1.1 增加 bcmath calendar exif gettext sockets dba 
+# mysqli pcntl pdo_mysql shmop sysvmsg sysvsem sysvshm intl soap xmlrpc tidy xsl zip 扩展
+RUN docker-php-ext-install -j$(nproc) bcmath calendar exif gettext \
+sockets dba mysqli pcntl pdo_mysql shmop sysvmsg sysvsem sysvshm intl soap xmlrpc tidy xsl zip
+
+# 1.2 增加 Memcached redis  mongodb 扩展 
+RUN pecl install -o -f redis memcached mongodb \
+    && docker-php-ext-enable memcached redis mongodb
+
+# 1.3 增加 ldap 扩展 
+RUN docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu \
+    && docker-php-ext-install -j$(nproc) ldap
+
+# 1.4 增加 opcache 扩展 
+RUN docker-php-ext-configure opcache --enable-opcache && docker-php-ext-install opcache
+
+# 1.5 增加 GD 扩展. 图像处理
+RUN docker-php-ext-configure gd --enable-gd-native-ttf \
+    --with-jpeg-dir=/usr/lib --with-freetype-dir=/usr/include/freetype2 \
+    && docker-php-ext-install gd
+
+# 1.6 imagick 扩展
+RUN export CFLAGS="$PHP_CFLAGS" CPPFLAGS="$PHP_CPPFLAGS" LDFLAGS="$PHP_LDFLAGS" \
+    && pecl install imagick-3.4.3 \
+    && docker-php-ext-enable imagick
+
+# 配置 php.ini 文件
+RUN /bin/cp ${PHP_PATH}/php/php.ini-production ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^expose_php = On@expose_php = Off@' ${PHP_PATH}/php/php.ini \
+    # && sed -i "s@^memory_limit.*@memory_limit = 448M@" ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^post_max_size.*@post_max_size = 100M@' ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^request_order.*@request_order = "CGP"@' ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^short_open_tag = Off@short_open_tag = On@' ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^max_execution_time.*@max_execution_time = 600@' ${PHP_PATH}/php/php.ini \
+    && sed -i "s@^;date.timezone.*@date.timezone = Asia/Shanghai@" ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^upload_max_filesize.*@upload_max_filesize = 50M@' ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^;realpath_cache_size.*@realpath_cache_size = 2M@' ${PHP_PATH}/php/php.ini \
+    && sed -i 's@^output_buffering =@output_buffering = On\noutput_buffering =@' ${PHP_PATH}/php/php.ini \
+    # && [ -e /usr/sbin/sendmail ] && sed -i 's@^;sendmail_path.*@sendmail_path = /usr/sbin/sendmail -t -i@' ${PHP_PATH}/php/php.ini
+    && sed -i 's@^disable_functions.*@disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,ini_alter,ini_restore,dl,readlink,symlink,popepassthru,stream_socket_server,fsocket@' ${PHP_PATH}/php/php.ini
+
+#   启动 php-fpm 根据当前内存环境自动调优
+ADD script/start_php-fpm.sh /
+RUN chmod +x /start_php-fpm.sh
+
+# 启动 PHP-FPM
+CMD ["/start_php-fpm.sh"]

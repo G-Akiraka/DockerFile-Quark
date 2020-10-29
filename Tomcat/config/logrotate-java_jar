@@ -1,0 +1,9 @@
+/usr/local/tomcat/logs/java_jar.out {
+  daily
+  rotate 5
+  missingok
+  dateext
+  compress
+  notifempty
+  copytruncate
+}

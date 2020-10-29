@@ -1,0 +1,35 @@
+version: '3'
+services:
+  nginx:
+    build:
+      context: ./
+      dockerfile: ./nginx_1.17.8-alpine.yml
+    image: mynginx:1.17.8
+    restart: always
+    volumes:
+      - /data/nginx/ssl:/etc/nginx/ssl
+      - /data/nginx/wwwroot:/data/wwwroot
+      - /data/nginx/wwwlogs:/data/wwwlogs
+      - /data/nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+      - "443:443"
+  mysql:
+    mage: mysql:5.6
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "set_password"
+      MYSQL_USER: 'root'
+      MYSQL_PASS: 'set_password'
+    volumes:
+      - /data/mysql/data:/var/lib/mysql
+      - /data/mysql/conf/my.cnf:/etc/my.cnf
+    ports:
+      - "3306:3306"
+  php:
+    image: php:7.2-fpm
+    restart: always
+    volumes: 
+      - /data/nginx/wwwroot:/data/wwwroot
+    ports:
+      - "9000:9000"

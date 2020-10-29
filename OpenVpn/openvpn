@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# OpenVPN 目录
+OPENVPN_PATH="/data/compose/openvpn-server"
+OPENVPN_DATA="/data/openvpn/server"
+GIT_PATH="/opt/openvpn-server"
+while :
+do
+printf "
+#######################################################################
+#       OpenVpn AKA                                                   #
+#       For more information please visit https://akiraka.net         #
+#######################################################################
+#       1. 部署 OpenVPN                                               #
+#       2. 统一用户密码方式                                           #
+#       3. 添加用户证书方式                                           #
+#       4. 删除用户证书方式                                           #
+#       5. 启动服务                                                   #
+#       6. 停止服务                                                   #
+#       7. 重启服务                                                   #
+#       8. 查看日志                                                   #
+#       9. 编辑配置                                                   #
+#       10. 退出                                                      #
+#######################################################################
+"
+  #选项菜单
+  read -p "输入选项: " NUM
+  if [ $NUM -eq 1 ];then
+    echo -e "\033[34m 部署 OpenVPN  \033[0m"
+    read -p "输入服务器地址: " HOSTNAME
+    read -p "输入对外开端口 默认:1194: " PUBLIC_PORT
+    read -p "yes 走 UDP  no 走TCP : " SelectType
+    # 创建目录
+    mkdir -p ${OPENVPN_PATH}
+    mkdir -p ${OPENVPN_DATA}
+    # 判断文件是否存在
+    if [ -f "${GIT_PATH}/docker-compose.yml" ];then
+      echo "文件存在"
+      cp -f ${GIT_PATH}/docker-compose.yml ${OPENVPN_PATH}
+    else
+      echo "文件不存在"
+      # 拉取仓库
+      git clone https://gitee.com/G-Akiraka/OpenVpn-Docker.git /opt/openvpn
+      cp -f ${GIT_PATH}/docker-compose.yml ${OPENVPN_PATH}
+    fi
+    # 替换端口
+    if [ ! -n "$PUBLIC_PORT" ]; then
+      echo -e "\033[31m 使用默认端口: 1194 忽略回车 \033[0m"
+      sed -i s@SetPort@1194@g ${OPENVPN_PATH}/docker-compose.yml
+    else
+      echo -e "\033[31m 修改默认端口为: ${PUBLIC_PORT} \033[0m"
+      sed -i s@SetPort@${PUBLIC_PORT}@g ${OPENVPN_PATH}/docker-compose.yml
+    fi
+    # 替换协议 tcp or udp
+    if [ ${SelectType} == "yes" ]; then
+      echo -e "\033[31m 使用默认端口: 1194 忽略回车 \033[0m"
+      sed -i s@SetType@1194/udp@g ${OPENVPN_PATH}/docker-compose.yml
+    else
+      echo -e "\033[31m 修改默认端口为: ${PUBLIC_PORT} \033[0m"
+      sed -i s@SetType@1194@g ${OPENVPN_PATH}/docker-compose.yml
+    fi
+    # 创建专属网络
+    docker network create -d bridge --subnet 172.254.254.0/28 vpn-network
+    # 进入执行目录
+    cd ${OPENVPN_PATH}
+    echo -e "\033[32m 初始化 OpenVPN \033[0m"
+    echo -e "\033[31m 根据提示签名证书，该密码要牢记，否则后面如果签名其他用户时需要该密码忘记就尴尬了 \033[0m"
+    # 初始化
+    docker-compose run --rm openvpn-server ovpn_genconfig -u tcp://$HOSTNAME
+    docker-compose run --rm openvpn-server ovpn_initpki
+    # 追加配置文件
+    echo "" >> ${OPENVPN_DATA}/openvpn.conf
+    echo "# 添加统一用户与密码认证" >> ${OPENVPN_DATA}/openvpn.conf
+    echo "script-security 3" >> ${OPENVPN_DATA}/openvpn.conf
+    echo "username-as-common-name" >> ${OPENVPN_DATA}/openvpn.conf
+    echo "verify-client-cert none" >> ${OPENVPN_DATA}/openvpn.conf
+    echo "auth-user-pass-verify /etc/openvpn/checkpsw.sh via-env" >> ${OPENVPN_DATA}/openvpn.conf
+    # 拷贝相关文件
+    cp -f ${GIT_PATH}/psw-file ${OPENVPN_DATA}
+    cp -f ${GIT_PATH}/checkpsw.sh ${OPENVPN_DATA}
+    # 启动 OpenVPN
+    echo -e "\033[32m 启动 OpenVPN \033[0m"
+    docker-compose up -d
+  elif [ $NUM == 2 ];then
+    echo -e "\033[34m 使用用户密码方式 \033[0m"
+    vim ${OPENVPN_DATA}/psw-file
+  elif [ $NUM == 3 ];then
+    read -p "输入添加用户名: " NAME
+    echo -e "\033[34m 添加用户: ${NAME} \033[0m"
+    read -p "是否创建用户密码 回车或yes创建 no 不创建: " yesORno
+    if [ $yesORno == no ];then
+      docker exec -it openvpn-server easyrsa build-client-full ${NAME} nopass
+    else
+      docker exec -it openvpn-server easyrsa build-client-full ${NAME}
+    fi
+    docker exec -it openvpn-server ovpn_getclient ${NAME} > ${OPENVPN_DATA}/ovpn/${NAME}.ovpn
+    echo -e "\033[34m ${NAME} 用户创建成功 \033[0m"
+  elif [ $NUM == 4 ];then
+    read -p "输入删除用户名: " NAME
+    echo -e "\033[34m 删除用户: ${NAME} \033[0m"
+    cd ${OPENVPN_PATH}
+    # docker exec -it openvpn ovpn_revokeclient ${NAME}
+    docker exec -it openvpn-server ovpn_revokeclient ${NAME} remove
+    rm -f ${OPENVPN_DATA}/ovpn/${NAME}.ovpn
+    # rm -f ${OPENVPN_DATA}/pki/reqs/${NAME}.req
+    # rm -f ${OPENVPN_DATA}/pki/issued/${NAME}.crt
+    # rm -f ${OPENVPN_DATA}/pki/private/${NAME}.key
+    echo -e "\033[34m ${NAME} 用户删除成功 \033[0m"
+  elif [ $NUM == 5 ];then
+    echo -e "\033[34m 启动 OpenVPN 服务 \033[0m"
+    cd ${OPENVPN_PATH}
+    # 启动
+    docker-compose up -d
+  elif [ $NUM == 6 ];then
+    echo -e "\033[34m 停止 OpenVPN 服务 \033[0m"
+    cd ${OPENVPN_PATH}
+    docker-compose down
+  elif [ $NUM == 7 ];then
+    echo -e "\033[34m 重启 OpenVPN 服务 \033[0m"
+    docker restart openvpn
+  elif [ $NUM == 8 ];then
+    docker logs -f openvpn
+  elif [ $NUM == 9 ];then
+    echo -e "\033[34m 编辑配置文件 \033[0m"
+    vim ${OPENVPN_DATA}/openvpn.conf
+  elif [ $NUM == 10 ];then
+    echo -e "\033[34m 退出 \033[0m"
+    break
+  else
+    echo -e "\033[31m 输入错误 重新输入 \033[0m"
+  fi
+done

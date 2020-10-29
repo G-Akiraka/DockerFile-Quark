@@ -1,0 +1,20 @@
+version: '3'
+services:
+  openvpn:
+    restart: always
+    container_name: openvpn-server
+    image: kylemanna/openvpn:2.4
+    cap_add:
+      - NET_ADMIN
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "SetPort:SetType"
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /data/openvpn/server:/etc/openvpn
+      - /data/openvpn/server/ovpn:/etc/openvpn/ovpn
+networks:
+  default:
+    external:
+      name: vpn-network

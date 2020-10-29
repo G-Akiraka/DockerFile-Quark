@@ -1,0 +1,32 @@
+FROM alpine:3.10.2
+MAINTAINER akiraka@qq.com
+
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+#   设置 java 环境变量
+ENV PATH=$PATH:$JAVA_HOME/bin
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk
+ENV CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+
+#   使用阿里源与设置时间
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    #   更新系统\安装依赖包
+    && apk update \
+    && apk add fontconfig tzdata openjdk8 openssl-dev \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+#   拷贝文件
+ADD script/aka_jar-start.sh /root
+
+#   配置权限
+WORKDIR ${SRC_PATH}
+RUN chmod +x /root/aka_jar-start.sh
+ 
+#   进入 tomcat 工作目录 与 后续配置
+WORKDIR ${TOMCAT_PATH}
+
+#   启动命令
+CMD "/root/aka_jar-start.sh"

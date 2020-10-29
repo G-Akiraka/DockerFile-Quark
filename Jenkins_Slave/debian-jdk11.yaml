@@ -1,0 +1,40 @@
+FROM maven:3.6.3-jdk-11
+MAINTAINER akiraka@qq.com
+
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   解决 Jenkins_slave 否则控制台中文乱码
+ENV JAVA_OPTS="-Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8"
+#   设置时区
+ENV TZ Asia/Shanghai
+
+#   使用阿里源与设置时间
+RUN sed -i s@/deb.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
+    && sed -i s@/security.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    #   更新系统\安装依赖包
+    && apt-get update -y \
+    #  nodejs 10.x 最新版本
+    && curl -sL https://deb.nodesource.com/setup_10.x |  bash - \
+    && apt-get install -y --no-install-recommends fontconfig tzdata git nodejs \
+    && rm -r /var/lib/apt/lists/* 
+
+# 安装 cnpm
+RUN npm config set registry https://registry.npm.taobao.org \
+    && npm install -g cnpm --registry=https://registry.npm.taobao.org
+    
+#   拷贝文件
+COPY src/helm /usr/local/bin
+COPY src/kubectl /usr/local/bin
+COPY src/jenkins-slave /usr/local/bin
+COPY src/settings.xml /usr/share/maven/conf
+COPY src/slave.jar /usr/share/jenkins/slave.jar
+COPY src/simsun.ttc /usr/share/fonts/simsun.ttc
+
+#   权限
+RUN chmod +x /usr/local/bin/*
+
+#   工作目录
+WORKDIR /home/jenkins/agent/workspace
+
+ENTRYPOINT ["jenkins-slave"]

@@ -1,0 +1,24 @@
+# 从官方基础版本构建
+FROM python:3.6.12-alpine
+
+# 设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+
+# 使用阿里源与设置时间
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    #   更新系统\安装依赖包
+    && apk update \
+    && apk --no-cache add --virtual fontconfig tzdata curl bash vim mysql-dev grep build-base libc-dev libffi-dev mariadb-dev \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+# 其他配置与更换 pip 源
+RUN echo "set paste" >> /etc/vim/vimrc \
+    && echo "set tabstop=2" >> /etc/vim/vimrc \
+    && pip install -i https://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com ipython
+
+#   拷贝文件
+COPY env/bashrc /root/.bashrc
+COPY fonts/simsun.ttc /usr/share/fonts

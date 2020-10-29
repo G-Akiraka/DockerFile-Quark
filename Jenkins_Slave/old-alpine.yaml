@@ -1,0 +1,45 @@
+FROM maven:3.6.3-ibmjava-8-alpine
+MAINTAINER akiraka@qq.com
+
+#   设置容器中文，否则中文乱码
+# ENV LANG C.UTF-8
+ENV LANG=zh_CN.UTF-8
+#   解决 Jenkins_slave 否则控制台中文乱码
+ENV JAVA_OPTS="-Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8"
+#   设置时区
+ENV TZ Asia/Shanghai
+
+#   使用阿里源与设置时间
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    && apk update \
+    && apk add fontconfig tzdata curl git nodejs npm \
+    && rm -rf /tmp/* /var/cache/apk/*
+# 安装 cnpm
+RUN npm install -g cnpm --registry=https://registry.npm.taobao.org
+#   拷贝文件
+COPY src/helm /usr/local/bin
+
+COPY src/kubectl /usr/local/bin
+COPY src/jenkins-slave /usr/local/bin
+COPY src/settings.xml /usr/share/maven/conf
+COPY src/slave.jar /usr/share/jenkins/slave.jar
+COPY src/simsun.ttc /usr/share/fonts/simsun.ttc
+COPY apk/glibc-2.31-r0.apk /root
+COPY apk/glibc-bin-2.31-r0.apk /root
+COPY apk/glibc-i18n-2.31-r0.apk /root
+
+#   安装 Apk 解决 grails 项目编译中文乱码
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub \
+    && apk add /root/glibc-2.31-r0.apk \
+    && apk add /root/glibc-bin-2.31-r0.apk \
+    && apk add /root/glibc-i18n-2.31-r0.apk \
+    && /usr/glibc-compat/bin/localedef -c -f UTF-8 -i zh_CN zh_CN.utf8
+
+#   权限
+RUN chmod +x /usr/local/bin/*
+
+#   工作目录
+WORKDIR /home/jenkins/agent/workspace
+
+ENTRYPOINT ["jenkins-slave"]

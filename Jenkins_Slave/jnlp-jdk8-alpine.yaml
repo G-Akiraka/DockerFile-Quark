@@ -1,0 +1,46 @@
+ARG version=4.3-7-alpine
+FROM jenkins/agent:$version
+
+ARG AGENT_VERSION=4.5
+ARG MAVEN_VERSION=3.6.3
+ARG USER_HOME_DIR="/root"
+
+ENV LANG=zh_CN.UTF-8
+ENV TZ Asia/Shanghai
+ENV MAVEN_HOME=/usr/share/maven
+ENV MAVEN_CONFIG "${USER_HOME_DIR}/.m2"
+ENV JAVA_OPTS="-Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8"
+
+USER root
+
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    && apk update \
+    && apk add fontconfig tzdata fontconfig curl git nodejs npm bash grep \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+RUN npm install -g cnpm --registry=https://registry.npm.taobao.org \
+    && npm config set registry http://registry.npm.taobao.org/ \
+    && wget https://mirrors.tuna.tsinghua.edu.cn/apache/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    && tar xvf apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    && mv apache-maven-${MAVEN_VERSION} /usr/share/maven \
+    && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
+    && rm -rf apache-maven-${MAVEN_VERSION}-bin.tar.gz
+
+COPY src/helm /usr/local/bin
+COPY env/bashrc /root/.bashrc
+COPY src/kubectl /usr/local/bin
+COPY src/simsun.ttc /usr/share/fonts/simsun.ttc
+COPY src/jenkins-agent /usr/local/bin/jenkins-agent
+COPY src/settings.xml /usr/share/maven/conf/settings.xml
+
+RUN curl --create-dirs -fsSLo /usr/share/jenkins/agent.jar https://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/${AGENT_VERSION}/remoting-${AGENT_VERSION}.jar \
+    && chmod 755 /usr/share/jenkins \
+    && chmod 644 /usr/share/jenkins/agent.jar \
+    && ln -sf /usr/share/jenkins/agent.jar /usr/share/jenkins/slave.jar \
+    && ln -sf /usr/local/bin/jenkins-agent /usr/local/bin/jenkins-slave \
+    && chmod +x /usr/local/bin/*
+
+WORKDIR /home/jenkins/agent/workspace
+
+ENTRYPOINT ["jenkins-agent"]

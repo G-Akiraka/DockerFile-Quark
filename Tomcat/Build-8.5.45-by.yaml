@@ -1,0 +1,68 @@
+FROM openjdk:8
+MAINTAINER akiraka@qq.com
+
+#   设置自定义变量
+ENV SRC_PATH="/usr/local/src"
+ENV TOMCAT_PATH="/usr/local/tomcat"
+#   apr 环境变量
+ENV LD_LIBRARY_PATH=/usr/local/apr/lib
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+
+#   使用阿里源与设置时间
+RUN sed -i s@/deb.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
+    && sed -i s@/security.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    #   更新系统\安装依赖包
+    && apt-get update -y \
+    && apt-get install -y --no-install-recommends fontconfig tzdata dpkg-dev gcc libapr1-dev libssl-dev make \
+    && rm -r /var/lib/apt/lists/* 
+
+#   拷贝文件
+ADD script/aka_tomcat.sh /root
+ADD src/apr-1.7.0.tar.gz ${SRC_PATH}
+ADD fonts/simsun.ttc /usr/share/fonts
+ADD config/server.xml ${SRC_PATH}
+ADD src/apache-tomcat-8.5.45.tar.gz ${SRC_PATH}
+
+#   编译 apr
+WORKDIR ${SRC_PATH}/apr-1.7.0
+RUN ./configure --prefix=/usr/local/apr \
+    && make && make install
+
+#   编译 tomcat-native
+WORKDIR ${SRC_PATH}
+RUN tar xvf apache-tomcat-8.5.45/bin/tomcat-native.tar.gz -C /usr/local/src \
+    && cd tomcat-native-1.2.23-src/native \
+    && ./configure --with-apr=/usr/local/apr --with-java-home=/usr/local/openjdk-8 \
+    && make -j "$(nproc)" && make install
+
+#   配置 tomcat
+WORKDIR ${SRC_PATH}
+RUN /bin/mv apache-tomcat-8.5.45 ${TOMCAT_PATH} \
+    #   赋予 tomcat 启动脚本权限
+    && chmod +x /root/aka_tomcat.sh \
+    #   复制相关文件
+    && cp -f server.xml ${TOMCAT_PATH}/conf \
+    && cp catalina-jmx-remote.jar ${TOMCAT_PATH}/lib \
+    && rm -rf *
+ 
+#   进入 tomcat 工作目录 与 后续配置
+WORKDIR ${TOMCAT_PATH}
+#   自定义 tomcat 日志输出格式
+RUN sed -i 's/^.*java.util.logging.ConsoleHandler.formatter/#&/g' conf/logging.properties \
+    && sed -i '47a lina.org.apache.juli.AsyncFileHandler.formatter = java.util.logging.SimpleFormatter' conf/logging.properties \
+    && sed -i '48a java.util.logging.SimpleFormatter.format = %1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS [%4$s] [%3$s] %2$s %5$s %6$s%n' conf/logging.properties \
+    #   设置 tomcat-users.xml 用户名与密码，密码自动生成
+    && sed -i "s@^</tomcat-users>@<role rolename=\"admin-gui\"/>\n<role rolename=\"admin-script\"/>\n<role rolename=\"manager-gui\"/>\n<role rolename=\"manager-script\"/>\n<user username=\"admin\" password=\"$(cat /dev/urandom | head -1 | md5sum | head -c 10)\" roles=\"admin-gui,admin-script,manager-gui,manager-script\"/>\n</tomcat-users>@" conf/tomcat-users.xml \
+    #   删除多余的文件与目录
+    && cd ${TOMCAT_PATH} && rm -rf BUILDING.txt CONTRIBUTING.md LICENSE NOTICE RELEASE-NOTES RUNNING.txt README.md \
+    && cd webapps && rm -rf docs examples host-manager manager
+
+#   设置端口
+EXPOSE 8080
+
+#   启动命令
+CMD "/root/aka_tomcat.sh"

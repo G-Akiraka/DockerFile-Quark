@@ -1,0 +1,20 @@
+FROM adoptopenjdk/openjdk11:jdk-11.0.8_10-alpine-slim
+LABEL maintainer="Akiraka"
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+#   使用阿里源与设置时间
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    && apk update \
+    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+# 其他配置
+RUN echo "set paste" >> /etc/vim/vimrc \
+    && echo "set tabstop=2" >> /etc/vim/vimrc
+
+#   拷贝文件
+COPY env/bashrc /root/.bashrc
+COPY fonts/simsun.ttc /usr/share/fonts

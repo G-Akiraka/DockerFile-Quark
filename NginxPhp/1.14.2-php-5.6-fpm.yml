@@ -1,0 +1,20 @@
+# 从改镜像构建
+FROM registry.cn-hangzhou.aliyuncs.com/g-aka/php:5.6-fpm
+
+# 安装 Nginx
+RUN apt-get update \
+    && apt-get install -y nginx \
+    && rm -r /var/lib/apt/lists/*
+
+# 添加 Nginx 启动脚本
+ADD script/start_nginx-php.sh /root
+RUN chmod +x /root/start_nginx-php.sh \
+    && echo "<?php phpinfo(); ?>" > /var/www/html/index.php \
+    && rm -rf rm -rf /var/www/html/index.nginx-debian.html \
+    && rm -f /start_php-fpm.sh
+
+# 拷贝 Nginx 配置文件
+ADD conf /etc/nginx
+
+# 启动 nginx 服务
+CMD "/root/start_nginx-php.sh"
