@@ -9,21 +9,19 @@ ARG VERSION=azcopy_linux_amd64_10.7.0
 #   使用阿里源与设置时间
 RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
-    && apk --update add --virtual build-dependencies --no-cache wget tar \
-    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep rsync libc6-compat ca-certificates \
+    # && apk --update add --virtual build-dependencies --no-cache wget tar libc6-compat ca-certificates \
+    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep rsync  \
     && rm -rf /tmp/* /var/cache/apk/*
 
 #   拷贝文件
 COPY env/bashrc /root/.bashrc
 COPY fonts/simsun.ttc /usr/share/fonts
 
+# 安装 azcopy 其他配置
 RUN cd /root \
     && wget -O azcopyv10.tar https://aka.ms/downloadazcopy-v10-linux  \
     && tar -xf azcopyv10.tar \
     && find /root/ -name "azcopy" -exec cp {} /usr/bin/ \; \
     && rm -rf /root/* \
-    && apk del build-dependencies
-
-# 安装 azcopy 其他配置
-RUN echo "set paste" >> /etc/vim/vimrc \
+    && echo "set paste" >> /etc/vim/vimrc \
     && echo "set tabstop=2" >> /etc/vim/vimrc
