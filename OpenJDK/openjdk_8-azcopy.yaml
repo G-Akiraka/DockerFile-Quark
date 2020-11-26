@@ -9,8 +9,7 @@ ARG VERSION=azcopy_linux_amd64_10.7.0
 #   使用阿里源与设置时间
 RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
-    # && apk --update add --virtual build-dependencies --no-cache wget tar libc6-compat ca-certificates \
-    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep rsync  \
+    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep rsync libc6-compat\
     && rm -rf /tmp/* /var/cache/apk/*
 
 #   拷贝文件
