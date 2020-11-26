@@ -1,0 +1,25 @@
+FROM openjdk:8-alpine
+LABEL maintainer="Akiraka"
+#   设置容器中文，否则中文乱码
+ENV LANG C.UTF-8
+#   设置时区
+ENV TZ Asia/Shanghai
+#   使用阿里源与设置时间
+RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositories \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
+    && apk update \
+    && apk add fontconfig tzdata bash vim ttf-dejavu busybox-extras grep rsync \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+#   拷贝文件
+ADD src/azcopy.tar.gz /root
+COPY env/bashrc /root/.bashrc
+COPY fonts/simsun.ttc /usr/share/fonts
+
+# 安装 azcopy
+RUN /root/install.sh \
+    && rm -rf /root/*
+
+# 其他配置
+RUN echo "set paste" >> /etc/vim/vimrc \
+    && echo "set tabstop=2" >> /etc/vim/vimrc
