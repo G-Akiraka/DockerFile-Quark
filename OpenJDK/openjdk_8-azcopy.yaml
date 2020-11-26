@@ -17,7 +17,7 @@ RUN sed -i s@/dl-cdn.alpinelinux.org/@/mirrors.aliyun.com/@g /etc/apk/repositori
 COPY env/bashrc /root/.bashrc
 COPY fonts/simsun.ttc /usr/share/fonts
 
-RUN wget -O azcopyv10.tar https://aka.ms/downloadazcopy-v10-linux \
+RUN wget https://aka.ms/downloadazcopy-v10-linux -O azcopyv10.tar  -P /root \
     && tar -xf azcopyv10.tar \
     && find /root/ -name "azcopy" -exec cp {} /usr/bin/ \; \
     && rm -rf /root/* \
