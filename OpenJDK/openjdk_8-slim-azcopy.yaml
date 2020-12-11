@@ -17,6 +17,6 @@ COPY env/bashrc /root/.bashrc
 COPY src/azcopy /usr/bin/
 COPY fonts/simsun.ttc /usr/share/fonts
 
-# 安装 azcopy 其他配置
+#  其他配置
 RUN echo "set paste" >> /etc/vim/vimrc \
     && echo "set tabstop=2" >> /etc/vim/vimrc
