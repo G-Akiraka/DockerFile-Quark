@@ -18,6 +18,7 @@ git clone https://github.com/G-Akiraka/DockerFile-Nginx.git && cd DockerFile-Ngi
 #### 2、开始构建 Docker Nginx 镜像 
 ```
 docker build -t mynginx:1.18.0-alpine .
+docker build -t mynginx:1.18.0-alpine .
 ```
 #### 3、运行 Nginx 容器
 ```
