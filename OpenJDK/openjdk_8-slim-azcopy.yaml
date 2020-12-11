@@ -14,13 +14,9 @@ RUN sed -i s@/deb.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
 
 #   拷贝文件
 COPY env/bashrc /root/.bashrc
+COPY src/azcopy /usr/bin/
 COPY fonts/simsun.ttc /usr/share/fonts
 
 # 安装 azcopy 其他配置
-RUN cd /root \
-    && wget -O azcopyv10.tar https://aka.ms/downloadazcopy-v10-linux  \
-    && tar -xf azcopyv10.tar \
-    && find /root/ -name "azcopy" -exec cp {} /usr/bin/ \; \
-    && rm -rf /root/* \
-    && echo "set paste" >> /etc/vim/vimrc \
+RUN echo "set paste" >> /etc/vim/vimrc \
     && echo "set tabstop=2" >> /etc/vim/vimrc
