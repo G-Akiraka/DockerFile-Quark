@@ -15,14 +15,17 @@ git clone https://gitee.com/G-Akiraka/Docker-Alpine.git && cd Docker-Alpine
 # 构建 OpenJDK 8 Alpine
 docker build -f openjdk_8-alpine.yaml -t openjdk:8-alpine .
 
+# 构建 OpenJDK 8 Slim
+docker build -f openjdk_8-slim.yaml -t openjdk:8-slim .
+
 # 构建 OpenJDK 8 Alpine Azcopy
 docker build -f openjdk_8-azcopy.yaml -t openjdk:8-azcopy .
 
 # 构建 OpenJDK 11 Alpine
 docker build -f openjdk_11-alpine.yaml -t openjdk:11-alpine .
 
-# 构建 OpenJDK 11 Debain
-docker build -f openjdk_11.0.8-slim.yaml -t openjdk:11.0.8-slim .
+# 构建 OpenJDK 11 Slim
+docker build -f openjdk_11-slim.yaml -t openjdk:11-slim .
 ```
 #### 3、运行 Alpine 容器
 ```
