@@ -29,5 +29,8 @@ RUN chmod +x /root/aka_nginx.sh \
 # 添加定时任务，切割 nginx 日志
     && echo "1 0 * * * /usr/sbin/logrotate -f /etc/logrotate.d/nginx >/dev/null 2>&1" >> /var/spool/cron/crontabs/root
 
+# 设置 Nginx 工作目录
+WORKDIR /etc/nginx
+
 # 启动 nginx 服务
 CMD "/root/aka_nginx.sh"

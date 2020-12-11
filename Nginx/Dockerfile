@@ -27,5 +27,8 @@ RUN chmod +x /root/aka_nginx.sh \
 # 拷贝 Nginx 配置文件
 ADD conf /etc/nginx
 
+# 设置 Nginx 工作目录
+WORKDIR /etc/nginx
+
 # 启动 nginx 服务
 CMD "/root/aka_nginx.sh"
