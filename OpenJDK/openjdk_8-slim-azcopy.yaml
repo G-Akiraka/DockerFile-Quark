@@ -9,7 +9,7 @@ RUN sed -i s@/deb.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
     && sed -i s@/security.debian.org/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo '$TZ' > /etc/timezone \
     && apt-get update -y \
-    && apt-get install -y --no-install-recommends fontconfig tzdata vim telnet grep wget \
+    && apt-get install -y --no-install-recommends fontconfig tzdata vim telnet grep wget net-tools iputils-ping \
     && rm -r /var/lib/apt/lists/*
 
 #   拷贝文件
