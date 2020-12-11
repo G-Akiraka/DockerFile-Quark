@@ -13,27 +13,30 @@ git clone https://gitee.com/G-Akiraka/Docker-Alpine.git && cd Docker-Alpine
 #### 2、开始构建 Docker Alpine 镜像 
 ```
 # 构建 OpenJDK 8 Alpine
-docker build -f openjdk_8-alpine.yaml -t openjdk:8-alpine .
+docker build -f openjdk_8-alpine.yaml -t myopenjdk:8-alpine .
 
 # 构建 OpenJDK 8 Slim
-docker build -f openjdk_8-slim.yaml -t openjdk:8-slim .
+docker build -f openjdk_8-slim.yaml -t myopenjdk:8-slim .
+
+# 构建 OpenJDK 8 Slim Azcopy
+docker build -f openjdk_8-slim-azcopy.yaml -t myopenjdk:8-slim-azcopy .
 
 # 构建 OpenJDK 8 Alpine Azcopy
-docker build -f openjdk_8-azcopy.yaml -t openjdk:8-azcopy .
+docker build -f openjdk_8-azcopy.yaml -t myopenjdk:8-azcopy .
 
 # 构建 OpenJDK 11 Alpine
-docker build -f openjdk_11-alpine.yaml -t openjdk:11-alpine .
+docker build -f openjdk_11-alpine.yaml -t myopenjdk:11-alpine .
 
 # 构建 OpenJDK 11 Slim
-docker build -f openjdk_11-slim.yaml -t openjdk:11-slim .
+docker build -f openjdk_11-slim.yaml -t myopenjdk:11-slim .
 ```
 #### 3、运行 Alpine 容器
 ```
-docker run -d --name openjdk openjdk:8-alpine
+docker run -d --name openjdk myopenjdk:8-alpine
 ```
 #### 4、查看 Alpine 容器是否运行
 ```
 docker ps
 # 调试容器，如果需要的话
-docker run -it openjdk /bin/bash
+docker run -it myopenjdk /bin/bash
 ```
