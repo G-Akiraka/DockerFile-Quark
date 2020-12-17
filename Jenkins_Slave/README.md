@@ -18,7 +18,7 @@
 #### 2、开始构建 Jenkins-slave 镜像 
 ```
 #  基于 OpenJDK 8 镜像
-docker build -f jnlp-jdk8-alpine.yaml -t jenkins-slave:v1 .
+docker build -f jnlp-jdk8-alpine.yaml -t jenkins-slave:jdk8-alpine .
 #  基于 OpenJDK 11 镜像
-docker build -f jnlp-jdk11-alpine.yaml -t jenkins-slave:v2 .
+docker build -f jnlp-jdk11-alpine.yaml -t jenkins-slave:jdk11-alpine .
 ```
